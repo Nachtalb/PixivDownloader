@@ -156,22 +156,28 @@ class App:
     def download(self, post):
         if not os.path.isdir(self.settings.save_location):
             os.makedirs(self.settings.save_location)
+
         if post.type == 'illust':
-            self.download_illust(post)
+            downloader = self.download_illust
+            type = 'Image'
         elif post.type == 'ugoira':
-            self.download_ugoira(post)
+            downloader = self.download_ugoira
+            type = 'Video'
         else:
             print(f'At the moment "{post.type}" posts are not supported')
+            return
+
+        print(f'Downloading "{post.title}" ({post.id}) of type "{type}" from user "{post.user.name}" ({post.user.account})')
+        saved_to = downloader(post)
+        print(f'Downloaded to "{saved_to}"')
 
     def download_illust(self, post):
         image_url = post.meta_single_page.get('original_image_url', post.image_urls.large)
-        extension = os.path.splitext(image_url)[1]
-        filename = f'{post.id}_{post.title}{extension}'.replace(' ', '_')
-        print(f'Downloading "{post.title}" ({post.id}) from "{post.user.name}" ({post.user.account})')
+        extension = os.path.splitext(image_url)[1].lstrip('.')
+        filename = self.get_filename(post, extension)
 
         self.api.download(image_url, path=self.settings.save_location, name=filename, replace=True)
-        full_path = (Path(self.settings.save_location) / filename).absolute()
-        print(f'Downloaded to "{full_path}"')
+        return (Path(self.settings.save_location) / filename).absolute()
 
     def download_ugoira(self, post):
         ugoira_data = self.api.ugoira_metadata(post.id).ugoira_metadata
@@ -180,37 +186,45 @@ class App:
         with TemporaryDirectory() as dir:
             temp_dir = Path(dir)
             filename = '{post.id}.zip'
-            print(f'Downloading "{post.title}" ({post.id}) from "{post.user.name}" ({post.user.account})')
             self.api.download(zip_url, path=str(temp_dir), name=filename)
 
             frames_dir = temp_dir / 'frames'
             os.mkdir(frames_dir)
 
             print('Extracting downloaded images')
-            with ZipFile(temp_dir / filename, 'r') as zip_file:
-                zip_file.extractall(frames_dir)
+            self._extract_zip(temp_dir / filename, frames_dir)
 
             print('Generating mp4')
-            video_name = f'{post.id}_{post.title}.mp4'.replace(' ', '_')
+            video_name = self.get_filename(post, 'mp4')
             video_file = temp_dir / video_name
-
-            frames = sorted(map(lambda file: frames_dir / file, os.listdir(frames_dir)))
-            frames = list(map(imread, map(str, frames)))
-
-            framerate = 1000 / ugoira_data.frames[0].delay
-
-            height, width, layers = frames[0].shape
-            video = VideoWriter(str(video_file), VideoWriter_fourcc(*'mp4v'), framerate, (width, height))
-
-            for frame in frames:
-                video.write(frame)
-
-            destroyAllWindows()
-            video.release()
+            self._generate_mp4_from_frames(video_file, frames_dir, ugoira_data.frames[0].delay)
 
             final_path = (Path(self.settings.save_location) / video_name).absolute()
             shutil.move(video_file, final_path)
-        print(f'Downloaded to "{final_path}"')
+            return final_path
+
+    def get_filename(self, post, extension):
+        filename = f'{post.id}_{post.title}.{extension}'.replace(' ', '_')
+        return filename
+
+    def _extract_zip(self, zip_file, output_dir):
+        with ZipFile(zip_file, 'r') as zip_file:
+            zip_file.extractall(output_dir)
+
+    def _generate_mp4_from_frames(self, output_file, frames_dir, delay):
+        frames = sorted(map(lambda file: os.path.join(str(frames_dir), file), os.listdir(frames_dir)))
+        frames = list(map(imread, frames))
+
+        framerate = 1000 / delay
+
+        height, width, layers = frames[0].shape
+        video = VideoWriter(str(output_file), VideoWriter_fourcc(*'mp4v'), framerate, (width, height))
+
+        for frame in frames:
+            video.write(frame)
+
+        destroyAllWindows()
+        video.release()
 
     def settings_menu(self):
         menu_items = {
