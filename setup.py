@@ -6,7 +6,7 @@ maintainer = 'Nachtalb'
 
 setup(name='pixiv-downloader',
       version=version,
-      description='A helper to download pixiv artworks',
+      description='Download posts from pixiv.net via CLI, CLI UI or programmatically.',
       long_description='%s\n\n%s' % (Path('README.rst').read_text(),
                                      Path('docs/HISTORY.txt').read_text()),
 

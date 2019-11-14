@@ -190,21 +190,54 @@ class PixivDownloaderCLI:
 def main():
     parser = argparse.ArgumentParser(usage="""Pixiv Downloader
 
+PixivDownloader enables you to download artworks, mangas and videos from `pixiv.net <https://pixiv.net/>`_
+via CLI, CLI UI and programmatically.
+
+
+Usage
+-----
+
 To start CLI UI:
->>> python app.py
+
+$ pixiv
 
 To start downloads directly:
->>> python app.py "XXXXXXXX" "https://www.pixiv.net/en/artworks/XXXXXXXX"
+
+$ pixiv "XXXXXXXX" "https://www.pixiv.net/en/artworks/XXXXXXXX"
 
 If the user is not logged in yet the CLU UI starts and asks for login credentials.
-This can be disabled with useing --username and --password to log in. If only one
+This can be disabled with using --username and --password to log in. If only one
 of those is given then the Login CLI UI will be started asking for the missing value. So
 eg. in this case the UI will start and ask for a password:
->>> pytohn app.py "XXXXXXXX" -u my_user
 
-If you want to disable the CLI UI completly and just exit if no username and
-passords are given then use -q.
->>> python app.py "XXXXXXXX" -q
+$ pixiv "XXXXXXXX" -u my_user
+
+If you want to disable the CLI UI completely and just exit if no username and
+passwords are given then use -q.
+
+$ pixiv "XXXXXXXX" -q
+
+Finally, you can also use this downloader via its python interface like this:
+
+from pixiv.downloader import PixivDownloader
+pd = PixivDownloader(username='xxx', password='pwd')
+downloader = pd.download_by_url('https://www.pixiv.net/en/artworks/74607898', '~/Downloads/pixiv-downloads')
+# Or just by the id
+downloader = pd.download_by_id(74607898, '~/Downloads/pixiv-downloads')
+for path in downloader:
+    print(f'Downloaded {path}')
+
+
+Is my pixiv password saved?
+---------------------------
+
+TLDR: No, it is not.
+
+For the communication between the program and Pixiv `PixivPy <https://github.com/upbit/pixivpy>`_
+is used. This enables us to use a so-called "refresh token" with which we can
+re-authenticate without saving the password anywhere.
+
+This token, as well as other settings, are saved in ``~/.pixivrc``.
 """)
 
     parser.add_argument('-u', '--username', help='Pixiv username')
