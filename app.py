@@ -107,7 +107,6 @@ class App:
             except PixivError:
                 answer = prompt(menu_item('continue_menu', 'confirm', 'Login failed, try again?')).get('continue_menu')
                 if not answer:
-                    self.exit()
                     break
 
     def logout_menu(self):
