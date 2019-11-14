@@ -1,0 +1,3 @@
+PixivPy==3.5.2
+PyInquirer==1.0.3
+requests-toolbelt==0.9.1
