@@ -177,7 +177,10 @@ class App:
 
     def download_illust(self, post):
         image_url = post.meta_single_page.get('original_image_url', post.image_urls.large)
-        extension = os.path.splitext(image_url)[1].lstrip('.')
+        if '_webp' in image_url:
+            extension = 'webp'
+        else:
+            extension = os.path.splitext(image_url)[1].lstrip('.')
         filename = self.get_filename(post, extension)
 
         self.api.download(image_url, path=self.settings.save_location, name=filename, replace=True)
