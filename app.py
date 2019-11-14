@@ -84,6 +84,7 @@ class App:
         login = self.settings.login
         if login:
             self.api.set_auth(login['access_token'], login['refresh_token'])
+            self.api.auth()
             self.logged_in = True
 
     def start(self):
