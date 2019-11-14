@@ -5,6 +5,7 @@ from pixivpy3 import PixivError
 from typing import Dict
 from typing import List
 import json
+import os
 
 
 def menu_item(name: str, type: str, text: str, **kwargs) -> List[Dict]:
@@ -120,6 +121,32 @@ class App:
         self.settings.login = {}
 
     def get_media_menu(self):
+        id = prompt(menu_item('id_menu', 'input', 'Post ID')).get('id_menu')
+        if not id:
+            return
+        try:
+            post = self.api.illust_detail(id)
+            self.download(post.illust)
+        except PixivError:
+            print(f'Post with id: {id} not found')
+
+    def download(self, post):
+        if not os.path.isdir(self.settings.save_location):
+            os.makedirs(self.settings.save_location)
+        if post.type == 'illust':
+            self.download_illust(post)
+        elif post.type == 'ugoira':
+            self.download_ugoira(post)
+
+    def download_illust(self, post):
+        image_url = post.meta_single_page.get('original_image_url', post.image_urls.large)
+        extension = os.path.splitext(image_url)[1]
+        filename = f'{post.id}_{post.title}{extension}'.replace(' ', '_')
+
+        self.api.download(image_url, path=self.settings.save_location, name=filename, replace=True)
+        print(f'Downloaded to "{self.settings.save_location}/{filename}"')
+
+    def download_ugoira(self, post):
         pass
 
     def settings_menu(self):
