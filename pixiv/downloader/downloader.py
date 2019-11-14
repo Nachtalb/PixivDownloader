@@ -71,6 +71,7 @@ class PixivDownloader:
         return self.download_by_id(self.get_id_from_url(url), output_dir)
 
     def download(self, post, output_dir):
+        output_dir = Path(output_dir).expanduser().absolute()
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
             self.logger.debug('Created dir "%s"', output_dir)
@@ -106,7 +107,7 @@ class PixivDownloader:
         yield (Path(output_dir) / filename).absolute()
 
     def download_illust_collection(self, post, output_dir):
-        out_path = Path(output_dir)
+        output_dir = Path(output_dir)
         yield from self._downloade_meta_pages(post, output_dir)
 
     def download_manga(self, post, output_dir):
