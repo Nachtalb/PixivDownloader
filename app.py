@@ -145,6 +145,8 @@ class App:
             self.download_illust(post)
         elif post.type == 'ugoira':
             self.download_ugoira(post)
+        else:
+            print(f'At the moment "{post.type}" posts are not supported')
 
     def download_illust(self, post):
         image_url = post.meta_single_page.get('original_image_url', post.image_urls.large)
