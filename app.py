@@ -4,8 +4,10 @@ from pixivpy3 import AppPixivAPI
 from pixivpy3 import PixivError
 from typing import Dict
 from typing import List
+from urllib.parse import urlparse
 import json
 import os
+import re
 
 
 def menu_item(name: str, type: str, text: str, **kwargs) -> List[Dict]:
@@ -121,9 +123,15 @@ class App:
         self.settings.login = {}
 
     def get_media_menu(self):
-        id = prompt(menu_item('id_menu', 'input', 'Post ID')).get('id_menu')
-        if not id:
+        url_or_id = prompt(menu_item('id_menu', 'input', 'Post ID')).get('id_menu')
+        path = urlparse(url_or_id).path
+
+        ids = re.findall('(\\d+)', path)
+        if not ids:
+            print(f'Not a valid id or pixiv post url')
             return
+
+        id = ids[0]
         try:
             post = self.api.illust_detail(id)
             self.download(post.illust)
