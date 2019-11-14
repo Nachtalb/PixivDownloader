@@ -88,6 +88,10 @@ class App:
             self.logged_in = True
 
     def start(self):
+        if not self.logged_in:
+            print('Login to Pixiv')
+            self.login_menu()
+
         self.running = True
         while self.running:
             self.next()
