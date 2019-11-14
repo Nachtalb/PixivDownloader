@@ -1,10 +1,10 @@
 from PyInquirer import prompt
 from pathlib import Path
 from pixivpy3 import AppPixivAPI
+from pixivpy3 import PixivError
 from typing import Dict
 from typing import List
 import json
-import sys
 
 
 def menu_item(name: str, type: str, text: str, **kwargs) -> List[Dict]:
@@ -62,21 +62,29 @@ class App:
         self.api = AppPixivAPI()
         self.running = False
         self.settings = Settings('./settings.json')
-        self.username = ''
 
-    @property
-    def logged_in(self):
-        return bool(self.username)
+        self.logged_in = False
+        login = self.settings.login
+        if login:
+            self.api.set_auth(login['access_token'], login['refresh_token'])
+            self.logged_in = True
+
+    def start(self):
+        self.running = True
+        while self.running:
+            self.main_menu()
 
     def main_menu(self):
         menu_items = {}
         if not self.logged_in:
             menu_items['Login'] = self.login_menu
-        else:
-            menu_items['Logout'] = self.logout_menu
 
         menu_items['Get Media'] = self.get_media_menu
         menu_items['Settings'] = self.settings_menu
+
+        if self.logged_in:
+            menu_items['Logout'] = self.logout_menu
+
         menu_items['Exit'] = self.exit
 
         menu = menu_item('main_menu', 'list', 'What do you want to do', choices=menu_items.keys())
@@ -85,7 +93,22 @@ class App:
         method()
 
     def login_menu(self):
-        pass
+        username_menu = menu_item('username', 'input', 'Username:')
+        password_menu = menu_item('password', 'password', 'Password:')
+
+        while not self.logged_in:
+            username = prompt(username_menu).get('username')
+            password = prompt(password_menu).get('password')
+
+            try:
+                result = self.api.login(username, password)
+                self.settings.login = result.response
+                self.logged_in = True
+            except PixivError:
+                answer = prompt(menu_item('continue_menu', 'confirm', 'Login failed, try again?')).get('continue_menu')
+                if not answer:
+                    self.exit()
+                    break
 
     def logout_menu(self):
         pass
@@ -98,9 +121,8 @@ class App:
 
     def exit(self):
         self.running = False
-        sys.exit()
 
 
 if __name__ == '__main__':
     app = App()
-    app.main_menu()
+    app.start()
