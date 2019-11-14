@@ -55,6 +55,12 @@ class Settings:
                 return {}
             return json.loads(content)
 
+    def get(self, name):
+        self.__getattr__(name)
+
+    def set(self, name, value):
+        self.__setattr__(name, value)
+
     def __getattr__(self, name):
         if name.startswith('_'):
             return super().__getattr__(name)
@@ -131,6 +137,8 @@ class App:
 
     def get_media_menu(self):
         url_or_id = prompt(menu_item('id_menu', 'input', 'Post ID')).get('id_menu')
+        if not url_or_id:
+            return
         path = urlparse(url_or_id).path
 
         ids = re.findall('(\\d+)', path)
@@ -205,7 +213,26 @@ class App:
         print(f'Downloaded to "{final_path}"')
 
     def settings_menu(self):
-        pass
+        menu_items = {
+            f'Save Location ({self.settings.save_location})': {
+                'name': 'save_location',
+                'text': 'Where should the files be stored?',
+                'type': 'input',
+            },
+            'Back': {},
+        }
+        answer = prompt(menu_item('settings_overview_menu', 'list', 'What do you want to change?', choices=menu_items))
+        answer = answer.get('settings_overview_menu')
+        settings_args = menu_items.get(answer)
+        if not answer:
+            return
+        self.settings_change_menu(**settings_args)
+
+    def settings_change_menu(self, name, text, type, **kwargs):
+        answer = prompt(menu_item('new_value_menu', type, text, **kwargs)).get('new_value_menu')
+        if answer == '' or answer is None:
+            return
+        self.settings.set(name, answer)
 
     def exit(self):
         self.running = False
