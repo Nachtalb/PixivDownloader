@@ -261,7 +261,8 @@ class App:
         answer = prompt(menu_item('settings_overview_menu', 'list', 'What do you want to change?', choices=menu_items))
         answer = answer.get('settings_overview_menu')
         settings_args = menu_items.get(answer)
-        if not answer:
+
+        if not settings_args:
             return
         self.settings_change_menu(**settings_args)
 
