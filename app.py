@@ -1,13 +1,20 @@
 from PyInquirer import prompt
+from cv2 import VideoWriter
+from cv2 import VideoWriter_fourcc
+from cv2 import destroyAllWindows
+from cv2 import imread
 from pathlib import Path
 from pixivpy3 import AppPixivAPI
 from pixivpy3 import PixivError
+from tempfile import TemporaryDirectory
 from typing import Dict
 from typing import List
 from urllib.parse import urlparse
+from zipfile import ZipFile
 import json
 import os
 import re
+import shutil
 
 
 def menu_item(name: str, type: str, text: str, **kwargs) -> List[Dict]:
@@ -159,7 +166,43 @@ class App:
         print(f'Downloaded to "{full_path}"')
 
     def download_ugoira(self, post):
-        pass
+        ugoira_data = self.api.ugoira_metadata(post.id).ugoira_metadata
+        zip_url = ugoira_data.zip_urls.get('large', ugoira_data.zip_urls.medium)
+
+        with TemporaryDirectory() as dir:
+            temp_dir = Path(dir)
+            filename = '{post.id}.zip'
+            print(f'Downloading "{post.title}" ({post.id}) from "{post.user.name}" ({post.user.account})')
+            self.api.download(zip_url, path=str(temp_dir), name=filename)
+
+            frames_dir = temp_dir / 'frames'
+            os.mkdir(frames_dir)
+
+            print('Extracting downloaded images')
+            with ZipFile(temp_dir / filename, 'r') as zip_file:
+                zip_file.extractall(frames_dir)
+
+            print('Generating mp4')
+            video_name = f'{post.id}_{post.title}.mp4'.replace(' ', '_')
+            video_file = temp_dir / video_name
+
+            frames = sorted(map(lambda file: frames_dir / file, os.listdir(frames_dir)))
+            frames = list(map(imread, map(str, frames)))
+
+            framerate = 1000 / ugoira_data.frames[0].delay
+
+            height, width, layers = frames[0].shape
+            video = VideoWriter(str(video_file), VideoWriter_fourcc(*'mp4v'), framerate, (width, height))
+
+            for frame in frames:
+                video.write(frame)
+
+            destroyAllWindows()
+            video.release()
+
+            final_path = (Path(self.settings.save_location) / video_name).absolute()
+            shutil.move(video_file, final_path)
+        print(f'Downloaded to "{final_path}"')
 
     def settings_menu(self):
         pass
