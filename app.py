@@ -98,7 +98,7 @@ class App:
         if not self.logged_in:
             menu_items['Login'] = self.login_menu
 
-        menu_items['Get Media'] = self.get_media_menu
+        menu_items['Download Post'] = self.download_post_menu
         menu_items['Settings'] = self.settings_menu
 
         if self.logged_in:
@@ -138,10 +138,14 @@ class App:
         self.logged_in = False
         self.settings.login = {}
 
-    def get_media_menu(self):
-        url_or_id = prompt(menu_item('id_menu', 'input', 'Post ID')).get('id_menu')
+    def download_post_menu(self):
+        url_or_id = prompt(menu_item('id_menu', 'input', 'Post ID:')).get('id_menu')
         if not url_or_id:
             return
+
+        self.download_by_url_or_id(url_or_id)
+
+    def download_by_url_or_id(self, url_or_id):
         path = urlparse(url_or_id).path
 
         ids = re.findall('(\\d+)', path)
@@ -152,7 +156,7 @@ class App:
         id = ids[0]
         try:
             post = self.api.illust_detail(id)
-            self.download(post.illust)
+            return self.download(post.illust)
         except PixivError:
             print(f'Post with id: {id} not found')
 
