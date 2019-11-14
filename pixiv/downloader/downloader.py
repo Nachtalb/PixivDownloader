@@ -10,6 +10,7 @@ from zipfile import ZipFile
 import os
 import re
 import shutil
+import logging
 
 
 class PixivDownloaderError(Exception):
@@ -20,7 +21,7 @@ class PixivDownloaderError(Exception):
 
 
 class PixivDownloader:
-    def __init__(self, client=None, username=None, password=None):
+    def __init__(self, client=None, username=None, password=None, log_level=logging.WARNING):
         if not client and (bool(username) != bool(password)):
             raise AttributeError('If no client is given both username and password must be given')
 
@@ -32,10 +33,23 @@ class PixivDownloader:
         if not client and username and password:
             self.api.login(username, password)
 
+        self.logger = logging.getLogger('PixivDownloader')
+        stdout = logging.StreamHandler()
+        self.logger.addHandler(stdout)
+        self.logger.setLevel(log_level)
+
     def login(self, username=None, password=None, refresh_token=None):
+        if refresh_token:
+            self.logger.info('Loging in with refresh_token')
+        elif username:
+            self.logger.info('Loging in with username %s', username)
+        else:
+            self.logger.info('Loging')
+
         return self.api.auth(username=username, password=password, refresh_token=refresh_token)
 
     def logout(self):
+        self.logger.info('Logout')
         self.api = AppPixivAPI()
 
     def get_id_from_url(self, url):
@@ -59,18 +73,24 @@ class PixivDownloader:
     def download(self, post, output_dir):
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
+            self.logger.debug('Created dir "%s"', output_dir)
 
         if post.type == 'illust' and not post.meta_pages:
             downloader = self.download_illust
+            type = 'Image'
         elif post.type == 'illust' and post.meta_pages:
             downloader = self.download_illust_collection
+            type = 'Image Collection'
         elif post.type == 'ugoira':
             downloader = self.download_ugoira
+            type = 'Video'
         elif post.type == 'manga':
             downloader = self.download_manga
+            type = 'Manga'
         else:
             raise PixivDownloaderError(f'Post type "{post.type}" not supported')
 
+        self.logger.info('Initialize "%s" downloader for post %s', type, post.id)
         return downloader(post, output_dir)
 
     def download_illust(self, post, output_dir):
@@ -81,6 +101,7 @@ class PixivDownloader:
             extension = os.path.splitext(image_url)[1].lstrip('.')
         filename = self.get_filename(post, extension)
 
+        self.logger.info('Downloading "%s"', image_url)
         self.api.download(image_url, path=output_dir, name=filename, replace=True)
         yield (Path(output_dir) / filename).absolute()
 
@@ -92,6 +113,7 @@ class PixivDownloader:
         output_dir = Path(output_dir) / f'{post.title}-{post.user.account}'
         if not output_dir.is_dir():
             output_dir.mkdir(parents=True, exist_ok=True)
+            self.logger.debug('Created dir "%s"', output_dir)
 
         yield from self._downloade_meta_pages(post, output_dir)
 
@@ -105,6 +127,7 @@ class PixivDownloader:
                 extension = os.path.splitext(image_url)[1].lstrip('.')
             filename = self.get_filename(post, extension, suffix=f'-{index:0>2}')
 
+            self.logger.info('Downloading "%s"', image_url)
             self.api.download(image_url, path=str(output_dir), name=filename, replace=True)
             yield (output_dir / filename).absolute()
 
@@ -115,6 +138,7 @@ class PixivDownloader:
         with TemporaryDirectory() as dir:
             temp_dir = Path(dir)
             filename = '{post.id}.zip'
+            self.logger.info('Downloading "%s"', zip_url)
             self.api.download(zip_url, path=str(temp_dir), name=filename)
 
             frames_dir = temp_dir / 'frames'
@@ -137,10 +161,12 @@ class PixivDownloader:
         return filename
 
     def _extract_zip(self, zip_file, output_dir):
+        self.logger.info('Extract "%s"', zip_file)
         with ZipFile(zip_file, 'r') as zip_file:
             zip_file.extractall(output_dir)
 
     def _generate_mp4_from_frames(self, output_file, frames_dir, delay):
+        self.logger.info('Generate video to "%s"', output_file)
         frames = sorted(map(lambda file: os.path.join(str(frames_dir), file), os.listdir(frames_dir)))
         frames = list(map(imread, frames))
 

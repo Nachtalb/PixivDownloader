@@ -7,6 +7,7 @@ from typing import Dict
 from typing import List
 import argparse
 import json
+import logging
 import sys
 
 
@@ -68,7 +69,7 @@ class Settings:
 
 class PixivDownloaderCLI:
     def __init__(self):
-        self.downloader = PixivDownloader()
+        self.downloader = PixivDownloader(log_level=logging.INFO)
         self.logged_in = False
         self.next = self.login_menu
         self.running = False
