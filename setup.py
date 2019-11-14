@@ -1,7 +1,7 @@
 from pathlib import Path
 from setuptools import setup, find_packages
 
-version = '0.1.0'
+version = '0.1.1.dev0'
 maintainer = 'Nachtalb'
 
 setup(name='pixivdownloader',
