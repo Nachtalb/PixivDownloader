@@ -157,9 +157,12 @@ class App:
         if not os.path.isdir(self.settings.save_location):
             os.makedirs(self.settings.save_location)
 
-        if post.type == 'illust':
+        if post.type == 'illust' and not post.meta_pages:
             downloader = self.download_illust
             type = 'Image'
+        elif post.type == 'illust' and post.meta_pages:
+            downloader = self.download_illust_collection
+            type = 'Image Collection'
         elif post.type == 'ugoira':
             downloader = self.download_ugoira
             type = 'Video'
@@ -169,7 +172,8 @@ class App:
 
         print(f'Downloading "{post.title}" ({post.id}) of type "{type}" from user "{post.user.name}" ({post.user.account})')
         saved_to = downloader(post)
-        print(f'Downloaded to "{saved_to}"')
+        for path in saved_to:
+            print(f'Downloaded to "{path}"')
 
     def download_illust(self, post):
         image_url = post.meta_single_page.get('original_image_url', post.image_urls.large)
@@ -177,7 +181,21 @@ class App:
         filename = self.get_filename(post, extension)
 
         self.api.download(image_url, path=self.settings.save_location, name=filename, replace=True)
-        return (Path(self.settings.save_location) / filename).absolute()
+        yield (Path(self.settings.save_location) / filename).absolute()
+
+    def download_illust_collection(self, post):
+        out_path = Path(self.settings.save_location)
+        for index, image in enumerate(post.meta_pages, 1):
+            image_url = image.image_urls.get('original', image.image_urls.large)
+
+            if '_webp' in image_url:
+                extension = 'webp'
+            else:
+                extension = os.path.splitext(image_url)[1].lstrip('.')
+            filename = self.get_filename(post, extension, suffix=f'-{index:0>2}')
+
+            self.api.download(image_url, path=str(out_path), name=filename, replace=True)
+            yield (out_path / filename).absolute()
 
     def download_ugoira(self, post):
         ugoira_data = self.api.ugoira_metadata(post.id).ugoira_metadata
@@ -201,10 +219,12 @@ class App:
 
             final_path = (Path(self.settings.save_location) / video_name).absolute()
             shutil.move(video_file, final_path)
-            return final_path
+            yield final_path.absolute()
 
-    def get_filename(self, post, extension):
-        filename = f'{post.id}_{post.title}.{extension}'.replace(' ', '_')
+    def get_filename(self, post, extension, prefix=None, suffix=None,):
+        suffix = suffix or ''
+        prefix = prefix or ''
+        filename = f'{prefix}{post.id}-{post.title}{suffix}.{extension}'.replace(' ', '_')
         return filename
 
     def _extract_zip(self, zip_file, output_dir):
