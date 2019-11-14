@@ -66,6 +66,8 @@ class PixivDownloader:
             downloader = self.download_illust_collection
         elif post.type == 'ugoira':
             downloader = self.download_ugoira
+        elif post.type == 'manga':
+            downloader = self.download_manga
         else:
             raise PixivDownloaderError(f'Post type "{post.type}" not supported')
 
@@ -84,6 +86,16 @@ class PixivDownloader:
 
     def download_illust_collection(self, post, output_dir):
         out_path = Path(output_dir)
+        yield from self._downloade_meta_pages(post, output_dir)
+
+    def download_manga(self, post, output_dir):
+        output_dir = Path(output_dir) / f'{post.title}-{post.user.account}'
+        if not output_dir.is_dir():
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+        yield from self._downloade_meta_pages(post, output_dir)
+
+    def _downloade_meta_pages(self, post, output_dir):
         for index, image in enumerate(post.meta_pages, 1):
             image_url = image.image_urls.get('original', image.image_urls.large)
 
@@ -93,8 +105,8 @@ class PixivDownloader:
                 extension = os.path.splitext(image_url)[1].lstrip('.')
             filename = self.get_filename(post, extension, suffix=f'-{index:0>2}')
 
-            self.api.download(image_url, path=str(out_path), name=filename, replace=True)
-            yield (out_path / filename).absolute()
+            self.api.download(image_url, path=str(output_dir), name=filename, replace=True)
+            yield (output_dir / filename).absolute()
 
     def download_ugoira(self, post, output_dir):
         ugoira_data = self.api.ugoira_metadata(post.id).ugoira_metadata
