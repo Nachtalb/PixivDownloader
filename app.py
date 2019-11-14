@@ -111,7 +111,14 @@ class App:
                     break
 
     def logout_menu(self):
-        pass
+        answer = prompt(menu_item('logout_menu', 'confirm', 'Are you sure you want to log out?')).get('logout_menu')
+        if answer:
+            self.logout()
+
+    def logout(self):
+        self.api = AppPixivAPI()
+        self.logged_in = False
+        self.settings.login = {}
 
     def get_media_menu(self):
         pass
