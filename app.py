@@ -150,9 +150,11 @@ class App:
         image_url = post.meta_single_page.get('original_image_url', post.image_urls.large)
         extension = os.path.splitext(image_url)[1]
         filename = f'{post.id}_{post.title}{extension}'.replace(' ', '_')
+        print(f'Downloading "{post.title}" ({post.id}) from "{post.user.name}" ({post.user.account})')
 
         self.api.download(image_url, path=self.settings.save_location, name=filename, replace=True)
-        print(f'Downloaded to "{self.settings.save_location}/{filename}"')
+        full_path = (Path(self.settings.save_location) / filename).absolute()
+        print(f'Downloaded to "{full_path}"')
 
     def download_ugoira(self, post):
         pass
