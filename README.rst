@@ -67,6 +67,15 @@ This token, as well as other settings, are saved in ``~/.pixivrc``.
 Installation
 ============
 
+With pip:
+
+.. code-block:: bash
+
+    pip install pixivdownloader
+    pixiv
+
+From source:
+
 .. code-block:: bash
 
     git clone https://github.com/Nachtalb/PixivDownloader.git

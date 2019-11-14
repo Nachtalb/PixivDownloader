@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 version = '0.0.1.dev0'
 maintainer = 'Nachtalb'
 
-setup(name='pixiv-downloader',
+setup(name='pixivdownloader',
       version=version,
       description='Download posts from pixiv.net via CLI, CLI UI or programmatically.',
       long_description='%s\n\n%s' % (Path('README.rst').read_text(),
