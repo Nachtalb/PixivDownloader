@@ -154,11 +154,12 @@ class App:
             return
 
         id = ids[0]
-        try:
-            post = self.api.illust_detail(id)
-            return self.download(post.illust)
-        except PixivError:
+        post = self.api.illust_detail(id)
+        if post.get('error'):
             print(f'Post with id: {id} not found')
+            return
+
+        return self.download(post.illust)
 
     def download(self, post):
         if not os.path.isdir(self.settings.save_location):
