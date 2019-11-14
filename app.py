@@ -11,10 +11,12 @@ from typing import Dict
 from typing import List
 from urllib.parse import urlparse
 from zipfile import ZipFile
+import argparse
 import json
 import os
 import re
 import shutil
+import sys
 
 
 def menu_item(name: str, type: str, text: str, **kwargs) -> List[Dict]:
@@ -115,19 +117,25 @@ class App:
         method = menu_items.get(answer.get('main_menu'), self.exit)
         method()
 
-    def login_menu(self):
+    def login(self, username, password):
+        result = self.api.login(username, password)
+        self.settings.login = result.response
+        self.logged_in = True
+
+    def login_menu(self, username=None, password=None, try_again=True):
         username_menu = menu_item('username', 'input', 'Username:')
         password_menu = menu_item('password', 'password', 'Password:')
 
         while not self.logged_in:
-            username = prompt(username_menu).get('username')
-            password = prompt(password_menu).get('password')
+            username = username or prompt(username_menu).get('username')
+            password = password or prompt(password_menu).get('password')
 
             try:
-                result = self.api.login(username, password)
-                self.settings.login = result.response
-                self.logged_in = True
+                self.login(username, password)
             except PixivError:
+                if not try_again:
+                    print('Login failed')
+                    return
                 answer = prompt(menu_item('continue_menu', 'confirm', 'Login failed, try again?')).get('continue_menu')
                 if not answer:
                     break
@@ -291,5 +299,44 @@ class App:
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(usage="""Pixiv Downloader
+
+To start CLI UI:
+>>> python app.py
+
+To start downloads directly:
+>>> python app.py "XXXXXXXX" "https://www.pixiv.net/en/artworks/XXXXXXXX"
+
+If the user is not logged in yet the CLU UI starts and asks for login credentials.
+This can be disabled with useing --username and --password to log in. If only one
+of those is given then the Login CLI UI will be started asking for the missing value. So
+eg. in this case the UI will start and ask for a password:
+>>> pytohn app.py "XXXXXXXX" -u my_user
+
+If you want to disable the CLI UI completly and just exit if no username and
+passords are given then use -q.
+>>> python app.py "XXXXXXXX" -q
+""")
+
+    parser.add_argument('-u', '--username', help='Pixiv username')
+    parser.add_argument('-p', '--password', help='Pixiv password')
+    parser.add_argument('-q', '--quiet', help='Disable login prompt when direct download is used',
+                        action='store_true')
+    parser.add_argument('posts', nargs='*', help='URLs or post IDs of pixiv posts to download')
+
+    args = parser.parse_args()
     app = App()
-    app.start()
+    if args.posts:
+        if not app.logged_in:
+            if args.quiet and (not args.username or args.password):
+                sys.exit(1)
+            print('Login to Pixiv')
+            app.login_menu(args.username, args.password, try_again=not (args.password and args.username))
+
+            if not app.logged_in:
+                sys.exit(1)
+
+        for post in args.posts:
+            app.download_by_url_or_id(post)
+    else:
+        app.start()
