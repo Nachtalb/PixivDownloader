@@ -9,7 +9,7 @@ via CLI, CLI UI and programmatically.
 
 
 Usage
------
+=====
 
 To start CLI UI:
 
@@ -53,7 +53,7 @@ Finally, you can also use this downloader via its python interface like this:
 
 
 Is my pixiv password saved?
----------------------------
+===========================
 
 TLDR: No, it is not.
 
@@ -65,7 +65,7 @@ This token, as well as other settings, are saved in ``~/.pixivrc``.
 
 
 Installation
-------------
+============
 
 .. code-block:: bash
 
@@ -73,3 +73,26 @@ Installation
     cd PixivDownloader
     python setup.py install
     pixiv
+
+
+Links
+=====
+
+- Github: https://github.com/Nachtalb/PixivDownloader
+- Issues: https://github.com/Nachtalb/PixivDownloader/issues
+
+
+Thirdparty packages used:
+
+- Pixiv API: https://github.com/upbit/pixivpy
+- CLI UI library: https://github.com/CITGuru/PyInquirer
+- Video library: https://github.com/skvark/opencv-python
+
+
+Copyright
+=========
+
+This package is copyrighted by `Nachtalb <https://github.com/Nachtalb/>`_.
+
+`PixivDownloader <https://github.com/Nachtalb/PixivDownloader>`_ is licensed under GNU General Public License, version 3.
+Terms
