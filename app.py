@@ -78,6 +78,7 @@ class App:
         self.api = AppPixivAPI()
         self.running = False
         self.settings = Settings('./settings.json')
+        self.next = self.main_menu
 
         self.logged_in = False
         login = self.settings.login
@@ -88,9 +89,10 @@ class App:
     def start(self):
         self.running = True
         while self.running:
-            self.main_menu()
+            self.next()
 
     def main_menu(self):
+        self.next = self.main_menu
         menu_items = {}
         if not self.logged_in:
             menu_items['Login'] = self.login_menu
@@ -250,6 +252,7 @@ class App:
         video.release()
 
     def settings_menu(self):
+        self.next = self.main_menu
         menu_items = {
             f'Save Location ({self.settings.save_location})': {
                 'name': 'save_location',
@@ -267,6 +270,7 @@ class App:
         self.settings_change_menu(**settings_args)
 
     def settings_change_menu(self, name, text, type, **kwargs):
+        self.next = self.settings_menu
         answer = prompt(menu_item('new_value_menu', type, text, **kwargs)).get('new_value_menu')
         if answer == '' or answer is None:
             return
