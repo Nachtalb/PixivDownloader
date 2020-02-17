@@ -5,7 +5,7 @@ Changelog
 0.1.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix slash in filename resulting in additional folders [Nachtalb]
 
 
 0.1.0 (2019-11-15)

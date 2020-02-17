@@ -158,7 +158,7 @@ class PixivDownloader:
     def get_filename(self, post, extension, prefix=None, suffix=None,):
         suffix = suffix or ''
         prefix = prefix or ''
-        filename = f'{prefix}{post.id}-{post.title}{suffix}.{extension}'.replace(' ', '_')
+        filename = f'{prefix}{post.id}-{post.title}{suffix}.{extension}'.replace('/', '_').replace(' ', '_')
         return filename
 
     def _extract_zip(self, zip_file, output_dir):
