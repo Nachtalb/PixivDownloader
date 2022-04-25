@@ -1,5 +1,6 @@
 settings.json
 pixiv_downloader/
+pixiv_downloads/
 
 
 # Created by https://www.gitignore.io/api/vim,linux,macos,emacs,python,windows,sublimetext,jetbrains+all,visualstudiocode

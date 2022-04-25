@@ -12,6 +12,9 @@ from cv2 import VideoWriter_fourcc
 from cv2 import destroyAllWindows
 from cv2 import imread
 from pixivpy3 import AppPixivAPI
+from pixivpy3.utils import PixivError
+
+from .common import print_upwd_deprecated_warning
 
 
 class PixivDownloaderError(Exception):
@@ -22,38 +25,34 @@ class PixivDownloaderError(Exception):
 
 
 class PixivDownloader:
-    def __init__(
-        self, client=None, username=None, password=None, log_level=logging.WARNING
-    ):
-        if not client and (bool(username) != bool(password)):
-            raise AttributeError(
-                "If no client is given both username and password must be given"
-            )
+    def __init__(self, client=None, username=None, password=None, log_level=logging.WARNING, refresh_token=None):
+        self.logger = logging.getLogger("PixivDownloader")
+        stdout = logging.StreamHandler()
+        self.logger.addHandler(stdout)
+        self.logger.setLevel(log_level)
+
+        if username or password:
+            self.logger.warning(print_upwd_deprecated_warning())
 
         if client:
             self.api = client
         else:
             self.api = AppPixivAPI()
 
-        if not client and username and password:
-            self.api.login(username, password)
-
-        self.logger = logging.getLogger("PixivDownloader")
-        stdout = logging.StreamHandler()
-        self.logger.addHandler(stdout)
-        self.logger.setLevel(log_level)
+        if not client and refresh_token:
+            self.login(refresh_token=refresh_token)
 
     def login(self, username=None, password=None, refresh_token=None):
         if refresh_token:
             self.logger.info("Loging in with refresh_token")
-        elif username:
-            self.logger.info("Loging in with username %s", username)
+        elif username or password:
+            warning = print_upwd_deprecated_warning()
+            self.logger.warning(warning)
+            raise PixivError(f"[ERROR] login() failed. {warning}")
         else:
             self.logger.info("Loging")
 
-        return self.api.auth(
-            username=username, password=password, refresh_token=refresh_token
-        )
+        return self.api.auth(refresh_token=refresh_token)
 
     def logout(self):
         self.logger.info("Logout")
@@ -70,9 +69,7 @@ class PixivDownloader:
     def download_by_id(self, post_id, output_dir):
         data = self.api.illust_detail(post_id)
         if data.get("error"):
-            raise PixivDownloaderError(
-                "Could not get post info or post doesn't exist.", data
-            )
+            raise PixivDownloaderError("Could not get post info or post doesn't exist.", data)
 
         return self.download(data.illust, output_dir)
 
@@ -104,9 +101,7 @@ class PixivDownloader:
         return downloader(post, output_dir)
 
     def download_illust(self, post, output_dir):
-        image_url = post.meta_single_page.get(
-            "original_image_url", post.image_urls.large
-        )
+        image_url = post.meta_single_page.get("original_image_url", post.image_urls.large)
         if "_webp" in image_url:
             extension = "webp"
         else:
@@ -140,9 +135,7 @@ class PixivDownloader:
             filename = self.get_filename(post, extension, suffix=f"-{index:0>2}")
 
             self.logger.info('Downloading "%s"', image_url)
-            self.api.download(
-                image_url, path=str(output_dir), name=filename, replace=True
-            )
+            self.api.download(image_url, path=str(output_dir), name=filename, replace=True)
             yield (output_dir / filename).absolute()
 
     def download_ugoira(self, post, output_dir):
@@ -162,9 +155,7 @@ class PixivDownloader:
 
             video_name = self.get_filename(post, "mp4")
             video_file = temp_dir / video_name
-            self._generate_mp4_from_frames(
-                video_file, frames_dir, ugoira_data.frames[0].delay
-            )
+            self._generate_mp4_from_frames(video_file, frames_dir, ugoira_data.frames[0].delay)
 
             final_path = (Path(output_dir) / video_name).absolute()
             shutil.move(video_file, final_path)
@@ -179,9 +170,7 @@ class PixivDownloader:
     ):
         suffix = suffix or ""
         prefix = prefix or ""
-        filename = f"{prefix}{post.id}-{post.title}{suffix}.{extension}".replace(
-            "/", "_"
-        ).replace(" ", "_")
+        filename = f"{prefix}{post.id}-{post.title}{suffix}.{extension}".replace("/", "_").replace(" ", "_")
         return filename
 
     def _extract_zip(self, zip_file, output_dir):
@@ -191,19 +180,13 @@ class PixivDownloader:
 
     def _generate_mp4_from_frames(self, output_file, frames_dir, delay):
         self.logger.info('Generate video to "%s"', output_file)
-        frames = sorted(
-            map(
-                lambda file: os.path.join(str(frames_dir), file), os.listdir(frames_dir)
-            )
-        )
+        frames = sorted(map(lambda file: os.path.join(str(frames_dir), file), os.listdir(frames_dir)))
         frames = list(map(imread, frames))
 
         framerate = 1000 / delay
 
         height, width, _ = frames[0].shape
-        video = VideoWriter(
-            str(output_file), VideoWriter_fourcc(*"mp4v"), framerate, (width, height)
-        )
+        video = VideoWriter(str(output_file), VideoWriter_fourcc(*"mp4v"), framerate, (width, height))
 
         for frame in frames:
             video.write(frame)
