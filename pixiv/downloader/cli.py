@@ -1,7 +1,5 @@
 import argparse
-import json
 import logging
-from pathlib import Path
 import sys
 from typing import Dict
 from typing import List
@@ -12,6 +10,7 @@ from pixivpy3 import PixivError
 from . import PixivDownloader
 from . import PixivDownloaderError
 from .common import REFRESH_TOKEN_LINK, print_upwd_deprecated_warning
+from .settings import Settings
 
 
 def menu_item(name: str, type: str, text: str, **kwargs) -> List[Dict]:
@@ -25,65 +24,20 @@ def menu_item(name: str, type: str, text: str, **kwargs) -> List[Dict]:
     return [item]
 
 
-class Settings:
-    _default = {"save_location": "./pixiv_downloads/"}
-
-    def __init__(self, location):
-        self._location = Path(location).expanduser()
-        self._settings = self._read()
-        if not self._settings:
-            self._settings = self._default.copy()
-            self._write()
-
-    def _write(self):
-        if not self._location.is_file():
-            self._location.touch()
-        with self._location.open("w") as file:
-            json.dump(self._settings, file, sort_keys=True, ensure_ascii=False, indent=4)
-
-    def _read(self):
-        if not self._location.is_file():
-            return {}
-        with self._location.open() as file:
-            content = file.read()
-            if not content:
-                return {}
-            return json.loads(content)
-
-    def get(self, name):
-        self.__getattr__(name)
-
-    def set(self, name, value):
-        self.__setattr__(name, value)
-
-    def __getattr__(self, name):
-        if name.startswith("_"):
-            return super().__getattr__(name)
-        return self._settings.get(name)
-
-    def __setattr__(self, name, value):
-        if name.startswith("_"):
-            return super().__setattr__(name, value)
-        self._settings[name] = value
-        self._write()
-
-
 class PixivDownloaderCLI:
     def __init__(self):
-        self.downloader = PixivDownloader(log_level=logging.INFO)
+        self.downloader = PixivDownloader(log_level=logging.INFO, auto_login=False)
         self.logged_in = False
         self.next = self.login_menu
         self.running = False
         self.settings = Settings("~/.pixivrc")
 
-        login = self.settings.login
-        if login:
-            self.downloader.login(refresh_token=login["refresh_token"])
+        if self.settings.login:
+            self.downloader.login(refresh_token=self.settings.login["refresh_token"])
             self.logged_in = True
 
     def start(self):
         if self.logged_in:
-            print("Login to Pixiv")
             self.next = self.main_menu
 
         self.running = True

@@ -1,7 +1,12 @@
+from pathlib import Path
+
 from prompt_toolkit.shortcuts import print_formatted_text
 
 REFRESH_TOKEN_LINK = "https://gist.github.com/ZipFile/c9ebedb224406f4f11845ab700124362"
 UPWD_PROBLEM_LINK = "https://github.com/upbit/pixivpy/issues/158#issuecomment-777815440"
+
+DEFAULT_DOWNLOAD_PATH = Path("~/Downloads/Pixiv").expanduser()
+DEFAULT_SETTINGS_PATH = Path("~/.pixivrc").expanduser()
 
 
 def print_upwd_deprecated_warning():

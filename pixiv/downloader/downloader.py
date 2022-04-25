@@ -14,7 +14,8 @@ from cv2 import imread
 from pixivpy3 import AppPixivAPI
 from pixivpy3.utils import PixivError
 
-from .common import print_upwd_deprecated_warning
+from .common import DEFAULT_DOWNLOAD_PATH, print_upwd_deprecated_warning
+from .settings import Settings
 
 
 class PixivDownloaderError(Exception):
@@ -25,11 +26,26 @@ class PixivDownloaderError(Exception):
 
 
 class PixivDownloader:
-    def __init__(self, client=None, username=None, password=None, log_level=logging.WARNING, refresh_token=None):
+    def __init__(
+        self,
+        client=None,
+        username=None,
+        password=None,
+        log_level=logging.WARNING,
+        refresh_token=None,
+        settings=None,
+        default_out_dir=None,
+        auto_login=True,
+    ):
         self.logger = logging.getLogger("PixivDownloader")
         stdout = logging.StreamHandler()
         self.logger.addHandler(stdout)
         self.logger.setLevel(log_level)
+
+        self.settings = settings or Settings()
+
+        refresh_token = refresh_token or self.settings.get("login", {}).get("refresh_token")  # type: ignore
+        self.default_out_dir = Path(default_out_dir or self.settings.get("save_location") or DEFAULT_DOWNLOAD_PATH)
 
         if username or password:
             self.logger.warning(print_upwd_deprecated_warning())
@@ -39,7 +55,7 @@ class PixivDownloader:
         else:
             self.api = AppPixivAPI()
 
-        if not client and refresh_token:
+        if not client and refresh_token and auto_login:
             self.login(refresh_token=refresh_token)
 
     def login(self, username=None, password=None, refresh_token=None):
@@ -66,22 +82,26 @@ class PixivDownloader:
 
         return ids[0]
 
-    def download_by_id(self, post_id, output_dir):
+    def download_by_id(self, post_id, output_dir=None):
         data = self.api.illust_detail(post_id)
         if data.get("error"):
             raise PixivDownloaderError("Could not get post info or post doesn't exist.", data)
 
         return self.download(data.illust, output_dir)
 
-    def download_by_url(self, url, output_dir):
+    def download_by_url(self, url, output_dir=None):
         return self.download_by_id(self.get_id_from_url(url), output_dir)
 
-    def download(self, post, output_dir):
-        output_dir = Path(output_dir).expanduser().absolute()
-        if not os.path.isdir(output_dir):
-            os.makedirs(output_dir)
-            self.logger.debug('Created dir "%s"', output_dir)
+    def _check_output_dir(self, output_dir=None):
+        output_dir = Path(output_dir or self.default_out_dir).expanduser().absolute()
 
+        if not output_dir.is_dir():
+            output_dir.mkdir(parents=True, exist_ok=True)
+            self.logger.debug('Created dir "%s"', output_dir)
+        return output_dir
+
+    def download(self, post, output_dir=None):
+        output_dir = self._check_output_dir(output_dir)
         if post.type == "illust" and not post.meta_pages:
             downloader = self.download_illust
             type = "Image"
@@ -100,7 +120,8 @@ class PixivDownloader:
         self.logger.info('Initialize "%s" downloader for post %s', type, post.id)
         return downloader(post, output_dir)
 
-    def download_illust(self, post, output_dir):
+    def download_illust(self, post, output_dir=None):
+        output_dir = self._check_output_dir(output_dir)
         image_url = post.meta_single_page.get("original_image_url", post.image_urls.large)
         if "_webp" in image_url:
             extension = "webp"
@@ -112,11 +133,12 @@ class PixivDownloader:
         self.api.download(image_url, path=output_dir, name=filename, replace=True)
         yield (Path(output_dir) / filename).absolute()
 
-    def download_illust_collection(self, post, output_dir):
-        output_dir = Path(output_dir)
+    def download_illust_collection(self, post, output_dir=None):
+        output_dir = self._check_output_dir(output_dir)
         yield from self._download_meta_pages(post, output_dir)
 
-    def download_manga(self, post, output_dir):
+    def download_manga(self, post, output_dir=None):
+        output_dir = self._check_output_dir(output_dir)
         output_dir = Path(output_dir) / f"{post.title}-{post.user.account}"
         if not output_dir.is_dir():
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -138,7 +160,8 @@ class PixivDownloader:
             self.api.download(image_url, path=str(output_dir), name=filename, replace=True)
             yield (output_dir / filename).absolute()
 
-    def download_ugoira(self, post, output_dir):
+    def download_ugoira(self, post, output_dir=None):
+        output_dir = self._check_output_dir(output_dir)
         ugoira_data = self.api.ugoira_metadata(post.id).ugoira_metadata
         zip_url = ugoira_data.zip_urls.get("large", ugoira_data.zip_urls.medium)
 
