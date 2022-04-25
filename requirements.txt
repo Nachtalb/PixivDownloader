@@ -1,4 +1,15 @@
+certifi==2021.10.8
+charset-normalizer==2.0.12
+cloudscraper==1.2.48
+idna==3.3
+numpy==1.22.3
 opencv-python==4.5.5.64
 PixivPy==3.7.0
-PyInquirer==1.0.3
+prompt-toolkit==3.0.29
+Pygments==2.12.0
+-e git+https://github.com/CITGuru/PyInquirer.git@7637373429bec66788650cda8091b7a6f12929ee#egg=PyInquirer
+pyparsing==3.0.8
+requests==2.27.1
 requests-toolbelt==0.9.1
+urllib3==1.26.9
+wcwidth==0.2.5

@@ -34,6 +34,7 @@ setup(
         "PyInquirer",
         "requests-toolbelt",
         "opencv-python",
+        "prompt-toolkit>3.0,<3.1",
     ],
     entry_points={"console_scripts": ["pixiv = pixiv.downloader.cli:main"]},
 )
